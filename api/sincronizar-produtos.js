@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   try {
-    // Buscar o token mais recente no Supabase
+    // Buscar token mais recente
     const tokenRes = await fetch(`${process.env.SUPABASE_URL}/rest/v1/tokens?order=created_at.desc&limit=1`, {
       headers: {
         apikey: process.env.SUPABASE_ANON_KEY,
@@ -13,10 +13,10 @@ export default async function handler(req, res) {
     const access_token = tokens?.[0]?.access_token;
 
     if (!access_token) {
-      return res.status(401).json({ error: "Token do Bling não encontrado no Supabase." });
+      return res.status(401).json({ error: "Token do Bling não encontrado" });
     }
 
-    // Buscar produtos da API do Bling
+    // Buscar produtos no Bling
     const blingRes = await fetch("https://www.bling.com.br/Api/v3/produtos", {
       headers: {
         Authorization: `Bearer ${access_token}`,
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Erro ao buscar produtos do Bling", detalhes: data });
     }
 
-    // Transformar produtos para formato do Supabase
+    // Preparar dados para Supabase
     const produtos = data.data.map((item) => {
       const p = item.produto;
       return {
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
       };
     });
 
-    // Enviar produtos para Supabase
+    // Inserir no Supabase
     const insertRes = await fetch(`${process.env.SUPABASE_URL}/rest/v1/produtos`, {
       method: "POST",
       headers: {
