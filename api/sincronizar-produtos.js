@@ -1,71 +1,69 @@
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  "https://bpqtzydsxmjazdzzcvno.supabase.co",
-  "SUA_SERVICE_ROLE_KEY"
-);
-
 export default async function handler(req, res) {
-  const { user } = await supabase.auth.getUser(req.headers.authorization?.replace("Bearer ", ""));
+  try {
+    // Buscar o token mais recente no Supabase
+    const tokenRes = await fetch(`${process.env.SUPABASE_URL}/rest/v1/tokens?order=created_at.desc&limit=1`, {
+      headers: {
+        apikey: process.env.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json"
+      }
+    });
 
-  if (!user) {
-    return res.status(401).json({ error: "Usuário não autenticado" });
-  }
+    const tokens = await tokenRes.json();
+    const access_token = tokens?.[0]?.access_token;
 
-  const usuario_id = user.id;
-
-  const { data: usuario, error: userError } = await supabase
-    .from("usuarios")
-    .select("bling_access_token")
-    .eq("id", usuario_id)
-    .single();
-
-  if (userError || !usuario?.bling_access_token) {
-    return res.status(403).json({ error: "Token do Bling não encontrado para este usuário" });
-  }
-
-  const response = await fetch("https://www.bling.com.br/Api/v3/produtos", {
-    headers: {
-      Authorization: `Bearer ${usuario.bling_access_token}`,
-      Accept: "application/json"
+    if (!access_token) {
+      return res.status(401).json({ error: "Token do Bling não encontrado no Supabase." });
     }
-  });
 
-  const data = await response.json();
+    // Buscar produtos da API do Bling
+    const blingRes = await fetch("https://www.bling.com.br/Api/v3/produtos", {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        Accept: "application/json"
+      }
+    });
 
-  if (!response.ok) {
-    return res.status(500).json({ error: "Erro ao buscar produtos no Bling", details: data });
+    const data = await blingRes.json();
+
+    if (!data?.data || !Array.isArray(data.data)) {
+      return res.status(500).json({ error: "Erro ao buscar produtos do Bling", detalhes: data });
+    }
+
+    // Transformar produtos para formato do Supabase
+    const produtos = data.data.map((item) => {
+      const p = item.produto;
+      return {
+        codigo: p.codigo,
+        descricao: p.descricao,
+        tipo: p.tipo,
+        situacao: p.situacao,
+        unidade: p.unidade,
+        preco: parseFloat(p.preco || 0),
+        estoque: parseFloat(p.estoqueAtual || 0)
+      };
+    });
+
+    // Enviar produtos para Supabase
+    const insertRes = await fetch(`${process.env.SUPABASE_URL}/rest/v1/produtos`, {
+      method: "POST",
+      headers: {
+        apikey: process.env.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates"
+      },
+      body: JSON.stringify(produtos)
+    });
+
+    if (!insertRes.ok) {
+      const erro = await insertRes.text();
+      return res.status(500).json({ error: "Erro ao salvar produtos no Supabase", detalhes: erro });
+    }
+
+    res.status(200).json({ message: "Produtos sincronizados com sucesso" });
+  } catch (err) {
+    console.error("Erro interno:", err);
+    res.status(500).json({ error: "Erro interno", detalhes: err.message });
   }
-
-  const produtos = data?.data ?? [];
-
-  for (const produto of produtos) {
-    await supabase.from("produtos").upsert({
-      usuario_id,
-      nome: produto.nome,
-      sku: produto.codigo,
-      descricao: produto.descricao,
-      preco: parseFloat(produto.preco ?? 0),
-      preco_promocional: parseFloat(produto.precoPromocional ?? 0),
-      custo: parseFloat(produto.custo ?? 0),
-      estoque: parseInt(produto.estoqueAtual ?? 0),
-      unidade: produto.unidade,
-      marca: produto.marca,
-      gtin: produto.gtin,
-      tipo: produto.tipo,
-      ativo: produto.ativo ?? true,
-      categoria: produto.categoria?.descricao,
-      peso: parseFloat(produto.pesoBruto ?? 0),
-      largura: parseFloat(produto.largura ?? 0),
-      altura: parseFloat(produto.altura ?? 0),
-      profundidade: parseFloat(produto.profundidade ?? 0),
-      imagem_url: produto.imagem?.link,
-      criado_em: produto.dataInclusao ? new Date(produto.dataInclusao).toISOString() : null,
-      atualizado_em: produto.dataAlteracao ? new Date(produto.dataAlteracao).toISOString() : null,
-      data_importacao: new Date().toISOString()
-    }, { onConflict: ['usuario_id', 'sku'] });
-  }
-
-  return res.status(200).json({ message: "Produtos sincronizados com sucesso", total: produtos.length });
 }
-
