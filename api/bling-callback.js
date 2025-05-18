@@ -7,15 +7,13 @@ export default async function handler(req, res) {
 
   const response = await fetch("https://www.bling.com.br/Api/v3/oauth/token", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "authorization_code",
       code,
       redirect_uri: "https://bling-callback.vercel.app/api/bling-callback",
       client_id: "e010efc402b05a2023303c5d55a527571d0b8da3",
-      client_secret: "a92dcc7a3552afa00af24b911e78000722c4b60d0cc822dd418698959caf",
+      client_secret: "a92dcc7a3552afa00af24b911e78000722c4b60d0cc822dd418698959caf"
     }),
   });
 
