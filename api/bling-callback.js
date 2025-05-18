@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = "https://bpqtzydsxmjazdzzcvno.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwcXR6eWRzeG1qYXpkenpjdm5vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzU0Mzk0NywiZXhwIjoyMDYzMTE5OTQ3fQ.8asuju_WmCmwyOefHdIRQ1Q8vAtoCJTPtV0CACzKIRE";
