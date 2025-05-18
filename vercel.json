@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "functions": {
+    "api/bling-callback.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/bling-callback",
+      "dest": "/api/bling-callback.js"
+    }
+  ]
+}
