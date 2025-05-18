@@ -6,16 +6,20 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Código de autorização não fornecido" });
     }
 
-    // Trocar o code por access_token
+    // Gerar cabeçalho Authorization com client_id e client_secret
+    const auth = Buffer.from(`${process.env.BLING_CLIENT_ID}:${process.env.BLING_CLIENT_SECRET}`).toString('base64');
+
+    // Trocar code por access_token no Bling
     const response = await fetch("https://www.bling.com.br/Api/v3/oauth/token", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": `Basic ${auth}`
+      },
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: process.env.BLING_REDIRECT_URI,
-        client_id: process.env.BLING_CLIENT_ID,
-        client_secret: process.env.BLING_CLIENT_SECRET
+        redirect_uri: process.env.BLING_REDIRECT_URI
       })
     });
 
@@ -25,7 +29,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Token não recebido", detalhes: data });
     }
 
-    // Salvar token no Supabase
+    // Enviar token para o Supabase (tabela: tokens)
     const supabaseRes = await fetch(`${process.env.SUPABASE_URL}/rest/v1/tokens`, {
       method: "POST",
       headers: {
@@ -47,10 +51,10 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Erro ao salvar token no Supabase", detalhes: erro });
     }
 
-    // Redirecionar para painel com sucesso
+    // Redirecionar para o painel com status de sucesso
     return res.redirect("/painel?conexao=sucesso");
   } catch (err) {
-    console.error("Erro:", err);
+    console.error("Erro no callback do Bling:", err);
     return res.status(500).json({ error: "Erro interno", detalhes: err.message });
   }
 }
