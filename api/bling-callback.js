@@ -34,18 +34,32 @@ export default async function handler(req, res) {
   if (!response.ok) {
     return res.status(500).json({ error: "Erro ao trocar token", details: data });
   }
-
   const { access_token, refresh_token, expires_in } = data;
-  const expires_at = new Date(Date.now() + expires_in * 1000).toISOString();
+const expires_at = new Date(Date.now() + expires_in * 1000).toISOString();
 
-  const { error } = await supabase
-    .from("usuarios")
-    .update({
-      bling_access_token: access_token,
-      bling_refresh_token: refresh_token,
-      bling_token_expires: expires_at,
-    })
-    .eq("id", state); // state deve ser o ID do usuário
+// Buscar e-mail do usuário via Bling (opcional)
+let bling_email = null;
+
+const infoResponse = await fetch("https://www.bling.com.br/Api/v3/usuarios/me", {
+  headers: {
+    Authorization: `Bearer ${access_token}`
+  }
+});
+
+if (infoResponse.ok) {
+  const info = await infoResponse.json();
+  bling_email = info?.data?.email ?? null;
+}
+
+await supabase
+  .from("usuarios")
+  .update({
+    bling_access_token: access_token,
+    bling_refresh_token: refresh_token,
+    bling_token_expires: expires_at,
+    bling_email: bling_email
+  })
+  .eq("id", state);  // state deve ser o ID do usuário
 
   if (error) {
     return res.status(500).json({ error: "Erro ao salvar no Supabase", details: error });
