@@ -1,3 +1,5 @@
+import React from "react";
+
 export const metadata = {
   title: "Bling Callback",
   description: "Integração com Bling ERP",
