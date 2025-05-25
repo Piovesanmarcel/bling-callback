@@ -1,5 +1,3 @@
-// src/app/layout.tsx
-
 export const metadata = {
   title: "Bling Callback",
   description: "Integração com Bling ERP",
