@@ -10,6 +10,7 @@ export async function GET(req) {
     const raw = `${process.env.BLING_CLIENT_ID}:${process.env.BLING_CLIENT_SECRET}`;
     const auth = Buffer.from(raw).toString("base64");
 
+    // Trocar code por access_token
     const tokenRes = await fetch("https://www.bling.com.br/Api/v3/oauth/token", {
       method: "POST",
       headers: {
@@ -29,6 +30,18 @@ export async function GET(req) {
       return Response.json({ error: "Token não recebido", detalhes: data }, { status: 400 });
     }
 
+    // NOVO: Buscar e-mail do usuário logado
+    const userInfoRes = await fetch("https://www.bling.com.br/Api/v3/usuarios/me", {
+      headers: {
+        Authorization: `Bearer ${data.access_token}`,
+        Accept: "application/json"
+      }
+    });
+
+    const userInfo = await userInfoRes.json();
+    const email = userInfo?.data?.email ?? null;
+
+    // Salvar token no Supabase
     const supabaseRes = await fetch(`${process.env.SUPABASE_URL}/rest/v1/tokens`, {
       method: "POST",
       headers: {
@@ -41,7 +54,7 @@ export async function GET(req) {
         refresh_token: data.refresh_token,
         token_type: data.token_type,
         expires_in: data.expires_in,
-        email: data.usuario?.email ?? null
+        email: email
       })
     });
 
