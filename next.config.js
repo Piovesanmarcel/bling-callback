@@ -1,9 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    serverActions: true
-  }
+  experimental: {}
 };
 
-export default nextConfig;
+module.exports = nextConfig;
